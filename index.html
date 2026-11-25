@@ -1,0 +1,2254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ひこにゃんゲームコレクション</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    body {
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top, #fffbeb 0%, #fef2f2 48%, #ecfdf5 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+    }
+    .game-frame {
+      position: relative;
+      width: 96vw;
+      max-width: 860px;
+      height: 74vh;
+      min-height: 460px;
+      max-height: 590px;
+      border-radius: 26px;
+      box-shadow: 0 22px 48px rgba(185, 28, 28, 0.2), 0 0 0 6px #dc2626, 0 0 0 10px #fbbf24;
+      overflow: hidden;
+      background-color: #e0f2fe;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    /* 和モダンスタイルボタン */
+    .btn-wafuu {
+      background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+      border: 3px solid #fde047;
+      box-shadow: 0 6px 0 #7f1d1d, 0 10px 20px rgba(0, 0, 0, 0.22);
+      transition: all 0.1s ease;
+    }
+    .btn-wafuu:hover:not(:disabled) {
+      transform: translateY(-2px);
+      filter: brightness(1.06);
+    }
+    .btn-wafuu:active:not(:disabled) {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #7f1d1d, 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    .btn-wafuu:disabled {
+      background: #cbd5e1;
+      border-color: #94a3b8;
+      color: #64748b;
+      box-shadow: 0 3px 0 #64748b;
+      cursor: not-allowed;
+    }
+    .btn-bell {
+      background: linear-gradient(180deg, #facc15 0%, #eab308 100%);
+      border: 3px solid #ffffff;
+      color: #713f12;
+      box-shadow: 0 5px 0 #a16207, 0 8px 15px rgba(0,0,0,0.2);
+      transition: all 0.1s ease;
+    }
+    .btn-bell:active:not(:disabled) {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #a16207;
+    }
+    .btn-bell:disabled {
+      background: #d1d5db;
+      border-color: #9ca3af;
+      color: #6b7280;
+      box-shadow: 0 3px 0 #6b7280;
+      cursor: not-allowed;
+    }
+    .btn-ctrl {
+      background: rgba(255, 255, 255, 0.95);
+      border: 3px solid #dc2626;
+      color: #b91c1c;
+      box-shadow: 0 4px 0 #991b1b;
+      transition: transform 0.08s;
+    }
+    .btn-ctrl:active:not(:disabled) {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #991b1b;
+    }
+    .btn-select-card {
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .btn-select-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 14px 28px rgba(185, 28, 28, 0.18);
+    }
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
+    }
+    .animate-float {
+      animation: floatSlow 2.6s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="p-2 sm:p-3">
+
+  <!-- トップバー：いつでもゲーム選択へ戻れるヘッダー -->
+  <header class="w-full max-w-[860px] mb-2.5 px-1 flex flex-wrap items-center justify-between gap-2">
+    <div class="flex items-center gap-2 bg-white/90 border-2 border-amber-400 rounded-full px-3.5 py-1.5 shadow-sm">
+      <span class="text-lg">🏯</span>
+      <span class="font-black text-sm sm:text-base text-red-700 tracking-wide">ひこにゃんゲームコレクション</span>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <div class="bg-amber-100/95 border-2 border-amber-400 rounded-full px-3 py-1 text-xs sm:text-sm font-black text-amber-900 shadow-sm">
+        🍡 所持おだんご: <span id="globalDangoCount">0</span>こ
+      </div>
+      <button id="backToMenuBtn" class="hidden bg-white hover:bg-red-50 text-red-700 border-2 border-red-600 font-black text-xs sm:text-sm px-3.5 py-1.5 rounded-full shadow-sm cursor-pointer transition">
+        🏠 ゲーム選択に戻る
+      </button>
+    </div>
+  </header>
+
+  <!-- メインゲームフレーム -->
+  <div class="game-frame" id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- ===================================================== -->
+    <!-- 0. ゲーム選択画面 -->
+    <!-- ===================================================== -->
+    <div id="gameSelectScreen" class="absolute inset-0 bg-gradient-to-b from-amber-50/92 via-white/94 to-red-50/92 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto z-30">
+      <div class="text-center mb-4 sm:mb-5">
+        <div class="inline-block bg-red-600 text-yellow-200 text-xs font-black px-3.5 py-1 rounded-full mb-1.5 shadow">
+          ✨ 遊んでみたいゲームをえらんでね ✨
+        </div>
+        <h1 class="text-xl sm:text-3xl font-black text-gray-900">
+          ひこにゃん＆なかまたちのミニゲーム
+        </h1>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl">
+        <!-- ゲーム①カード -->
+        <div class="btn-select-card bg-white border-4 border-red-600 rounded-3xl p-4 sm:p-5 flex flex-col justify-between shadow-lg">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="bg-red-100 text-red-700 text-xs font-black px-2.5 py-0.5 rounded-full">ゲーム①</span>
+              <span class="text-2xl">🍡🏯</span>
+            </div>
+            <h2 class="text-lg sm:text-xl font-black text-red-700 mb-1.5">
+              彦根城・和菓子キャッチ＆お散歩アクション
+            </h2>
+            <p class="text-xs text-gray-600 leading-relaxed mb-3">
+              赤い兜の白猫を動かして、お団子・どら焼き・赤こんにゃく・近江牛をキャッチ！カラスや落ち葉の渦を避け、鈴パワー満タンで「むぎゅっとフィーバー」発動！
+            </p>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-1.5 mb-3">
+              🏆 ハイスコア: <span id="menuG1HighScore">0</span>点
+            </div>
+            <button id="selectGame1Btn" class="btn-wafuu text-white font-black text-sm sm:text-base py-2.5 px-5 rounded-full w-full cursor-pointer">
+              和菓子キャッチで遊ぶ！
+            </button>
+          </div>
+        </div>
+
+        <!-- ゲーム②カード -->
+        <div class="btn-select-card bg-white border-4 border-amber-500 rounded-3xl p-4 sm:p-5 flex flex-col justify-between shadow-lg">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="bg-amber-100 text-amber-800 text-xs font-black px-2.5 py-0.5 rounded-full">ゲーム② ラン＆お着替え</span>
+              <span class="text-2xl">🏃‍♂️👘</span>
+            </div>
+            <h2 class="text-lg sm:text-xl font-black text-amber-800 mb-1.5">
+              おさんぽひこにゃん
+            </h2>
+            <p class="text-xs text-gray-600 leading-relaxed mb-3">
+              ひこにゃん・わるにゃんこ将軍と走るラン＆ジャンプアクション！落とし穴や障害物を飛び越えておだんごを集め、お気に入りの服をアンロック＆お着替えしよう！
+            </p>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5 mb-3">
+              <span>🏆 ハイスコア: <span id="menuG2HighScore">0</span>点</span>
+              <span>👘 衣装: <span id="menuOutfitCount">1/5</span></span>
+            </div>
+            <button id="selectGame2Btn" class="btn-wafuu text-white font-black text-sm sm:text-base py-2.5 px-5 rounded-full w-full cursor-pointer">
+              おさんぽひこにゃんで遊ぶ！
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- ゲーム① HUD＆オーバーレイ -->
+    <!-- ===================================================== -->
+    <div id="g1HudOverlay" class="hidden absolute top-0 left-0 right-0 p-3 sm:p-4 flex flex-wrap justify-between items-start pointer-events-none gap-2 z-10">
+      <div class="bg-white/90 backdrop-blur-sm border-2 border-red-600 rounded-2xl px-3 py-1.5 sm:px-4 sm:py-2 shadow-md flex items-center gap-3 sm:gap-4">
+        <div>
+          <div class="text-[10px] sm:text-xs font-bold text-red-700">スコア</div>
+          <div id="g1ScoreDisplay" class="text-lg sm:text-2xl font-black text-gray-800 leading-none">0</div>
+        </div>
+        <div class="h-7 w-0.5 bg-red-200"></div>
+        <div>
+          <div class="text-[10px] sm:text-xs font-bold text-amber-600">ハイスコア</div>
+          <div id="g1HighScoreDisplay" class="text-sm sm:text-lg font-bold text-amber-700 leading-none">0</div>
+        </div>
+      </div>
+
+      <div class="flex flex-col items-end gap-1.5">
+        <div class="bg-white/90 backdrop-blur-sm border-2 border-red-600 rounded-2xl px-3 py-1 shadow-md flex items-center gap-1" id="g1LifeContainer"></div>
+        <div class="bg-white/90 backdrop-blur-sm border-2 border-amber-500 rounded-2xl px-3 py-1.5 shadow-md flex items-center gap-2">
+          <span class="text-xs sm:text-sm font-black text-amber-700">🔔 鈴パワー</span>
+          <div class="w-24 sm:w-32 h-3.5 bg-gray-200 rounded-full overflow-hidden border border-amber-400">
+            <div id="g1BellGaugeBar" class="h-full bg-gradient-to-r from-amber-400 to-red-500 transition-all duration-150" style="width: 100%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="g1FeverBanner" class="hidden absolute top-20 left-1/2 -translate-x-1/2 pointer-events-none z-10">
+      <div class="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-red-800 font-black text-sm sm:text-xl px-5 py-1.5 rounded-full border-2 border-white shadow-lg animate-bounce whitespace-nowrap">
+        ✨ むぎゅっとフィーバー中！名物引き寄せ＆1.5倍！ ✨
+      </div>
+    </div>
+
+    <div id="g1TitleScreen" class="hidden absolute inset-0 bg-black/35 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center z-20">
+      <div class="bg-white/95 border-4 border-red-600 rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl animate-float">
+        <div class="inline-block bg-red-600 text-yellow-300 text-xs font-bold px-3 py-1 rounded-full mb-2">
+          🏯 彦根城お散歩アクション 🏯
+        </div>
+        <h2 class="text-xl sm:text-2xl font-black text-red-700 mb-2">
+          ひこにゃんの和菓子キャッチ大作戦！
+        </h2>
+        <p class="text-xs text-gray-600 mb-4 leading-relaxed">
+          左右移動＆ジャンプで名物をキャッチ！<br>
+          <span class="font-bold text-amber-700">🔔鈴パワー100%</span>で<span class="font-bold text-red-600">むぎゅっとフィーバー</span>発動！
+        </p>
+        <div class="grid grid-cols-2 gap-2 text-left bg-amber-50 p-3 rounded-2xl border border-amber-200 mb-4 text-xs">
+          <div>🍡 <strong>お団子・どら焼き</strong> <span class="text-emerald-700 font-bold">+100〜150</span></div>
+          <div>🥩 <strong>赤こんにゃく・近江牛</strong> <span class="text-red-600 font-bold">+250〜350</span></div>
+          <div>🐦‍⬛ <strong>カラス・落ち葉の渦</strong> <span class="text-gray-600">ライフ減少</span></div>
+          <div>🔔 <strong>Space / 鈴ボタン</strong> <span class="text-amber-700 font-bold">引き寄せ1.5倍</span></div>
+        </div>
+        <button id="g1StartBtn" class="btn-wafuu text-white font-black text-base sm:text-lg px-7 py-2.5 rounded-full w-full cursor-pointer">
+          お散歩に出発する！
+        </button>
+      </div>
+    </div>
+
+    <div id="g1GameOverScreen" class="hidden absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center z-20">
+      <div class="bg-white border-4 border-red-600 rounded-3xl p-6 max-w-sm w-full shadow-2xl">
+        <div class="text-4xl mb-2">😿</div>
+        <h2 class="text-2xl font-black text-red-700 mb-1">おつかれさまにゃ！</h2>
+        <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-4 my-4">
+          <div class="text-xs font-bold text-red-600">今回のスコア</div>
+          <div id="g1FinalScore" class="text-3xl font-black text-gray-900">0</div>
+          <div id="g1NewRecordBadge" class="hidden inline-block bg-amber-400 text-red-900 text-xs font-black px-3 py-0.5 rounded-full mt-1">
+            🎉 ハイスコア更新！ 🎉
+          </div>
+          <div class="text-xs text-gray-500 mt-1">
+            ベスト: <span id="g1FinalHighScore" class="font-bold text-amber-700">0</span>
+          </div>
+        </div>
+        <button id="g1RetryBtn" class="btn-wafuu text-white font-black text-base px-7 py-2.5 rounded-full w-full cursor-pointer">
+          もういちど遊ぶ！
+        </button>
+      </div>
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- ゲーム②（おさんぽひこにゃん）HUD＆オーバーレイ -->
+    <!-- ===================================================== -->
+    <div id="g2HudOverlay" class="hidden absolute top-0 left-0 right-0 p-3 sm:p-4 flex flex-wrap justify-between items-start pointer-events-none gap-2 z-10">
+      <div class="bg-white/92 backdrop-blur-sm border-2 border-amber-500 rounded-2xl px-3 py-1.5 sm:px-4 sm:py-2 shadow-md flex items-center gap-3 sm:gap-4">
+        <div>
+          <div class="text-[10px] sm:text-xs font-bold text-amber-700">スコア</div>
+          <div id="g2ScoreDisplay" class="text-lg sm:text-2xl font-black text-gray-900 leading-none">0</div>
+        </div>
+        <div class="h-7 w-0.5 bg-amber-200"></div>
+        <div>
+          <div class="text-[10px] sm:text-xs font-bold text-emerald-700">ハイスコア</div>
+          <div id="g2HighScoreDisplay" class="text-sm sm:text-lg font-bold text-emerald-800 leading-none">0</div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 pointer-events-auto">
+        <div class="bg-white/92 border-2 border-pink-400 rounded-2xl px-3 py-1.5 shadow-md text-xs sm:text-sm font-black text-pink-700">
+          🍡 おだんご: <span id="g2RunDangoDisplay">0</span>
+        </div>
+        <button id="g2OpenWardrobeBtn" class="bg-amber-400 hover:bg-amber-300 text-amber-950 border-2 border-white font-black text-xs sm:text-sm px-3 py-1.5 rounded-2xl shadow-md cursor-pointer transition">
+          👘 お着替え
+        </button>
+      </div>
+    </div>
+
+    <!-- ゲーム② スタート＆キャラ選択画面 -->
+    <div id="g2TitleScreen" class="hidden absolute inset-0 bg-black/35 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center z-20">
+      <div class="bg-white/96 border-4 border-amber-500 rounded-3xl p-4 sm:p-6 max-w-lg w-full shadow-2xl max-h-full overflow-y-auto">
+        <div class="inline-block bg-amber-500 text-white text-xs font-black px-3 py-0.5 rounded-full mb-1.5">
+          🌸 ラン＆ジャンプ＆お着替えチャレンジ 🌸
+        </div>
+        <h2 class="text-xl sm:text-2xl font-black text-gray-900 mb-1">おさんぽひこにゃん</h2>
+        <p class="text-xs text-gray-600 mb-3">
+          クリック・タップ・Space・↑キーで<strong>ジャンプ＆二段ジャンプ</strong>！落とし穴と障害物に注意しておだんごを集めよう！
+        </p>
+
+        <!-- キャラクター選択 -->
+        <div class="mb-4">
+          <div class="text-xs font-black text-gray-700 mb-1.5">いっしょにおさんぽするキャラをえらぶ：</div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <button id="pickHikonyanBtn" type="button" class="border-3 rounded-2xl p-2.5 text-left transition cursor-pointer bg-red-50 border-red-600 ring-2 ring-red-300">
+              <div class="font-black text-sm text-red-700">🐱 ひこにゃん</div>
+              <div class="text-[11px] text-gray-600">赤い兜の愛され白猫</div>
+            </button>
+            <button id="pickWarunyankoBtn" type="button" class="border-2 rounded-2xl p-2.5 text-left transition cursor-pointer bg-purple-50/60 border-purple-300 hover:border-purple-600">
+              <div class="font-black text-sm text-purple-900">😼 わるにゃんこ将軍</div>
+              <div class="text-[11px] text-gray-600">紫＆黒の威厳ある猫将軍</div>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <button id="g2WardrobeFromTitleBtn" type="button" class="bg-pink-500 hover:bg-pink-400 text-white font-black text-sm sm:text-base py-2.5 px-4 rounded-full border-2 border-pink-200 shadow cursor-pointer transition">
+            👘 お着替えする
+          </button>
+          <button id="g2StartBtn" type="button" class="btn-wafuu text-white font-black text-base sm:text-lg py-2.5 px-6 rounded-full flex-1 cursor-pointer">
+            おさんぽスタート！
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ゲーム② お着替え（衣装アンロック＆選択）モーダル -->
+    <div id="g2WardrobeScreen" class="hidden absolute inset-0 bg-black/55 backdrop-blur-sm flex flex-col items-center justify-center p-3 sm:p-5 z-30">
+      <div class="bg-white border-4 border-pink-400 rounded-3xl p-4 sm:p-5 max-w-xl w-full shadow-2xl max-h-[92%] flex flex-col">
+        <div class="flex items-center justify-between border-b border-pink-100 pb-2.5 mb-3">
+          <div>
+            <h3 class="text-lg sm:text-xl font-black text-pink-700">👘 お気に入りの服（お着替え）</h3>
+            <p class="text-xs text-gray-500">集めたおだんごで新しい衣装をアンロックして着替えられます！</p>
+          </div>
+          <div class="bg-amber-100 border border-amber-400 rounded-full px-3 py-1 text-xs sm:text-sm font-black text-amber-900">
+            🍡 <span id="wardrobeDangoCount">0</span>こ
+          </div>
+        </div>
+
+        <div id="outfitListContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 overflow-y-auto pr-1 flex-1 mb-3">
+          <!-- 衣装カードはJSで生成 -->
+        </div>
+
+        <button id="g2CloseWardrobeBtn" type="button" class="btn-wafuu text-white font-black text-sm sm:text-base py-2.5 px-6 rounded-full w-full cursor-pointer">
+          もどる
+        </button>
+      </div>
+    </div>
+
+    <!-- ゲーム② ゲームオーバー画面 -->
+    <div id="g2GameOverScreen" class="hidden absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center z-20">
+      <div class="bg-white border-4 border-amber-500 rounded-3xl p-5 sm:p-6 max-w-sm w-full shadow-2xl">
+        <div class="text-3xl mb-1">🍡✨</div>
+        <h2 id="g2GameOverReason" class="text-xl sm:text-2xl font-black text-amber-800 mb-1">おさんぽ終了にゃ！</h2>
+        <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3.5 my-3">
+          <div class="text-xs font-bold text-amber-700">今回のスコア</div>
+          <div id="g2FinalScore" class="text-3xl font-black text-gray-900">0</div>
+          <div id="g2NewRecordBadge" class="hidden inline-block bg-yellow-300 text-red-900 text-xs font-black px-3 py-0.5 rounded-full mt-1">
+            🎉 ハイスコア更新！ 🎉
+          </div>
+          <div class="text-xs text-gray-600 mt-1.5">
+            今回の獲得おだんご: <strong id="g2EarnedDango" class="text-pink-700">+0</strong>こ ／ ベスト: <strong id="g2FinalHighScore" class="text-emerald-700">0</strong>点
+          </div>
+        </div>
+        <div class="flex flex-col gap-2">
+          <button id="g2RetryBtn" type="button" class="btn-wafuu text-white font-black text-base py-2.5 px-6 rounded-full w-full cursor-pointer">
+            もういちど走る！
+          </button>
+          <button id="g2WardrobeFromOverBtn" type="button" class="bg-pink-500 hover:bg-pink-400 text-white font-black text-sm py-2 px-5 rounded-full w-full cursor-pointer transition">
+            👘 お着替えに行く
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- キャンバス下部の操作コントロールバー -->
+  <div id="bottomControlsBar" class="hidden w-full max-w-[860px] mt-2.5 px-2 flex justify-between items-center gap-2">
+    <!-- ゲーム①用コントロール -->
+    <div id="g1Controls" class="hidden w-full flex justify-between items-center gap-2">
+      <div class="flex gap-2">
+        <button id="g1BtnLeft" type="button" class="btn-ctrl font-black text-base sm:text-xl px-4 py-2 sm:px-6 sm:py-2.5 rounded-2xl cursor-pointer">
+          ◀ ひだり
+        </button>
+        <button id="g1BtnRight" type="button" class="btn-ctrl font-black text-base sm:text-xl px-4 py-2 sm:px-6 sm:py-2.5 rounded-2xl cursor-pointer">
+          みぎ ▶
+        </button>
+      </div>
+      <div class="flex gap-2">
+        <button id="g1BtnBell" type="button" class="btn-bell font-black text-xs sm:text-base px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-2xl cursor-pointer flex items-center gap-1">
+          <span>🔔</span>
+          <span>鈴を鳴らす</span>
+        </button>
+        <button id="g1BtnJump" type="button" class="btn-ctrl font-black text-base sm:text-xl px-4 py-2 sm:px-6 sm:py-2.5 rounded-2xl cursor-pointer">
+          ▲ ジャンプ
+        </button>
+      </div>
+    </div>
+
+    <!-- ゲーム②用コントロール（指一本ジャンプ＆二段ジャンプ） -->
+    <div id="g2Controls" class="hidden w-full flex justify-between items-center gap-3">
+      <div class="text-xs sm:text-sm font-bold text-gray-700 bg-white/85 border border-amber-300 rounded-2xl px-3.5 py-2">
+        💡 画面タップ / クリック / Space / ↑ で<strong>ジャンプ＆二段ジャンプ</strong>
+      </div>
+      <button id="g2BtnJump" type="button" class="btn-wafuu text-white font-black text-base sm:text-xl px-7 py-2.5 rounded-2xl cursor-pointer">
+        ▲ ジャンプ！
+      </button>
+    </div>
+  </div>
+
+  <!-- 通知トースト（画面上部中央のメッセージ表示用・alert代替） -->
+  <div id="toastBanner" class="hidden fixed top-16 left-1/2 -translate-x-1/2 bg-gray-900/90 text-yellow-200 border-2 border-amber-400 font-black text-xs sm:text-sm px-4 py-2 rounded-full shadow-xl z-50 pointer-events-none"></div>
+
+  <script>
+    /**
+     * =========================================================================
+     * 1. Web Audio API 効果音エンジン（両ゲーム共通・外部音源不使用）
+     * =========================================================================
+     */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtx();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      // ジャンプ音（二段ジャンプ時は少し高めの音階）
+      playJump(isDoubleJump = false) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = isDoubleJump ? 'triangle' : 'sine';
+        const startFreq = isDoubleJump ? 460 : 320;
+        const endFreq = isDoubleJump ? 920 : 680;
+        osc.frequency.setValueAtTime(startFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.16);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.17);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.18);
+      }
+
+      // 和菓子・おだんご取得音
+      playCatch(isRare = false) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const notes = isRare ? [587.33, 880, 1174.66] : [659.25, 987.77];
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.055);
+          gain.gain.setValueAtTime(0.18, now + idx * 0.055);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.055 + 0.16);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.055);
+          osc.stop(now + idx * 0.055 + 0.17);
+        });
+      }
+
+      // 鈴の音（チリンチリン♪）
+      playBell() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const bellFreqs = [1567.98, 2349.32, 3135.96, 4186.01];
+        [0, 0.14].forEach((offset) => {
+          bellFreqs.forEach((freq, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+            osc.frequency.setValueAtTime(freq, now + offset);
+            const vol = 0.13 / (i + 1);
+            gain.gain.setValueAtTime(vol, now + offset);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.52);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + offset);
+            osc.stop(now + offset + 0.54);
+          });
+        });
+      }
+
+      // 衣装アンロック＆着替えファンファーレ音
+      playUnlock() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const chord = [523.25, 659.25, 783.99, 1046.5];
+        chord.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+          gain.gain.setValueAtTime(0.18, now + idx * 0.07);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.07 + 0.25);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.07);
+          osc.stop(now + idx * 0.07 + 0.26);
+        });
+      }
+
+      // ダメージ・ゲームオーバー音
+      playDamage(isGameOver = false) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(isGameOver ? 260 : 220, now);
+        osc.frequency.linearRampToValueAtTime(isGameOver ? 75 : 95, now + (isGameOver ? 0.42 : 0.26));
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + (isGameOver ? 0.44 : 0.28));
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + (isGameOver ? 0.45 : 0.29));
+      }
+    }
+
+    /**
+     * =========================================================================
+     * 2. 共通データ（所持おだんご・衣装・ハイスコア・トースト表示）
+     * =========================================================================
+     */
+    const OUTFITS = [
+      {
+        id: 'classic',
+        name: 'おさんぽ定番スタイル',
+        desc: 'いつもの元気なおさんぽ装い',
+        cost: 0,
+        robeColor: '#ffffff',
+        accentColor: '#dc2626',
+        badge: '標準'
+      },
+      {
+        id: 'sakura_kimono',
+        name: '桜色の春着物',
+        desc: '彦根城の桜に映える華やかなピンク着物',
+        cost: 12,
+        robeColor: '#fbcfe8',
+        accentColor: '#db2777',
+        badge: '🌸 春色'
+      },
+      {
+        id: 'matcha_haori',
+        name: '宇治抹茶羽織',
+        desc: 'おだんご好きにぴったりの落ち着いた緑羽織',
+        cost: 25,
+        robeColor: '#bbf7d0',
+        accentColor: '#15803d',
+        badge: '🍵 和風'
+      },
+      {
+        id: 'shogun_cape',
+        name: '黄金の将軍マント',
+        desc: '太陽のように輝く金色の豪華マント',
+        cost: 45,
+        robeColor: '#fef08a',
+        accentColor: '#d97706',
+        badge: '👑 豪華'
+      },
+      {
+        id: 'hoshizora_ribbon',
+        name: '夜空と星のリボン装束',
+        desc: '宵の琵琶湖をイメージした深藍＆星飾り',
+        cost: 70,
+        robeColor: '#c7d2fe',
+        accentColor: '#4338ca',
+        badge: '✨ 特別'
+      }
+    ];
+
+    const sound = new SoundEngine();
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let width = 840;
+    let height = 540;
+    let groundY = 450;
+    let activeApp = 'SELECT'; // 'SELECT', 'GAME1', 'GAME2'
+
+    // 永続化データ
+    let g1HighScore = parseInt(localStorage.getItem('hikonyan_g1_highscore') || localStorage.getItem('hikonyan_highscore') || '0', 10);
+    let g2HighScore = parseInt(localStorage.getItem('hikonyan_g2_highscore') || '0', 10);
+    let totalDangos = parseInt(localStorage.getItem('hikonyan_dangos') || '15', 10); // 初回15こで序盤からお着替えも体験しやすく
+    let unlockedOutfits = JSON.parse(localStorage.getItem('hikonyan_unlocked_outfits') || '["classic"]');
+    let equippedOutfitId = localStorage.getItem('hikonyan_equipped_outfit') || 'classic';
+    let g2Character = localStorage.getItem('hikonyan_g2_char') || 'hikonyan'; // 'hikonyan' or 'warunyanko'
+
+    function saveProgress() {
+      localStorage.setItem('hikonyan_g1_highscore', String(g1HighScore));
+      localStorage.setItem('hikonyan_g2_highscore', String(g2HighScore));
+      localStorage.setItem('hikonyan_dangos', String(totalDangos));
+      localStorage.setItem('hikonyan_unlocked_outfits', JSON.stringify(unlockedOutfits));
+      localStorage.setItem('hikonyan_equipped_outfit', equippedOutfitId);
+      localStorage.setItem('hikonyan_g2_char', g2Character);
+    }
+
+    let toastTimeout = null;
+    function showToast(msg) {
+      const banner = document.getElementById('toastBanner');
+      banner.textContent = msg;
+      banner.classList.remove('hidden');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        banner.classList.add('hidden');
+      }, 2200);
+    }
+
+    function syncGlobalHeader() {
+      document.getElementById('globalDangoCount').textContent = totalDangos.toLocaleString();
+      document.getElementById('menuG1HighScore').textContent = g1HighScore.toLocaleString();
+      document.getElementById('menuG2HighScore').textContent = g2HighScore.toLocaleString();
+      document.getElementById('menuOutfitCount').textContent = `${unlockedOutfits.length}/${OUTFITS.length}`;
+      const backBtn = document.getElementById('backToMenuBtn');
+      if (activeApp === 'SELECT') {
+        backBtn.classList.add('hidden');
+      } else {
+        backBtn.classList.remove('hidden');
+      }
+    }
+
+    // 共通の桜吹雪
+    let cherryBlossoms = [];
+    function initCherryBlossoms() {
+      cherryBlossoms = [];
+      for (let i = 0; i < 22; i++) {
+        cherryBlossoms.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          size: 4 + Math.random() * 4,
+          speedX: -24 - Math.random() * 32,
+          speedY: 18 + Math.random() * 28,
+          angle: Math.random() * Math.PI * 2,
+          spin: (Math.random() - 0.5) * 3
+        });
+      }
+    }
+
+    function updateCherryBlossoms(dt) {
+      cherryBlossoms.forEach(p => {
+        p.x += p.speedX * dt;
+        p.y += p.speedY * dt;
+        p.angle += p.spin * dt;
+        if (p.x < -15) p.x = width + 15;
+        if (p.y > height + 15) {
+          p.y = -15;
+          p.x = Math.random() * width;
+        }
+      });
+    }
+
+    function drawCherryBlossoms() {
+      cherryBlossoms.forEach(p => {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+        ctx.fillStyle = 'rgba(251, 207, 232, 0.85)';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, p.size, p.size * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    // 彦根城＆琵琶湖の共通和風背景描画
+    function drawHikoneScenery(scrollOffset = 0) {
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
+      skyGrad.addColorStop(0, '#7dd3fc');
+      skyGrad.addColorStop(0.55, '#e0f2fe');
+      skyGrad.addColorStop(1, '#fef9c3');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // 雲
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      drawCloud(((width * 0.16 - scrollOffset * 0.12) % (width + 120) + (width + 120)) % (width + 120) - 60, height * 0.15, 1.0);
+      drawCloud(((width * 0.76 - scrollOffset * 0.12) % (width + 120) + (width + 120)) % (width + 120) - 60, height * 0.13, 0.85);
+
+      // 遠景の山
+      ctx.fillStyle = '#93c5fd';
+      ctx.beginPath();
+      ctx.moveTo(0, groundY - 120);
+      ctx.quadraticCurveTo(width * 0.25, groundY - 200, width * 0.55, groundY - 130);
+      ctx.quadraticCurveTo(width * 0.8, groundY - 178, width, groundY - 125);
+      ctx.lineTo(width, groundY);
+      ctx.lineTo(0, groundY);
+      ctx.closePath();
+      ctx.fill();
+
+      // 琵琶湖
+      const lakeY = groundY - 120;
+      const lakeGrad = ctx.createLinearGradient(0, lakeY, 0, groundY - 45);
+      lakeGrad.addColorStop(0, '#38bdf8');
+      lakeGrad.addColorStop(1, '#0284c7');
+      ctx.fillStyle = lakeGrad;
+      ctx.fillRect(0, lakeY, width, 76);
+
+      // 湖面のさざ波
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 5; i++) {
+        const wy = lakeY + 14 + i * 11;
+        const wx = (((i * 150 - scrollOffset * 0.35) % (width - 60)) + (width - 60)) % (width - 60) + 20;
+        ctx.beginPath();
+        ctx.moveTo(wx, wy);
+        ctx.lineTo(wx + 42, wy);
+        ctx.stroke();
+      }
+
+      // 彦根城天守
+      const castleX = (((width * 0.74 - scrollOffset * 0.2) % (width + 180)) + (width + 180)) % (width + 180) - 90;
+      drawHikoneCastle(castleX, groundY - 50);
+
+      // 桜の樹冠
+      drawSakuraCluster(width * 0.08, groundY - 62, 54);
+      drawSakuraCluster(width * 0.93, groundY - 58, 48);
+
+      // 石垣
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(0, groundY - 20, width, 20);
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1.5;
+      const stoneShift = -(scrollOffset * 0.5) % 36;
+      for (let sx = stoneShift - 36; sx < width + 36; sx += 36) {
+        ctx.strokeRect(sx, groundY - 20, 36, 10);
+        ctx.strokeRect(sx - 18, groundY - 10, 36, 10);
+      }
+    }
+
+    function drawCloud(x, y, scale) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+      ctx.beginPath();
+      ctx.arc(0, 0, 24, 0, Math.PI * 2);
+      ctx.arc(22, -6, 28, 0, Math.PI * 2);
+      ctx.arc(46, 0, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawSakuraCluster(x, y, r) {
+      ctx.save();
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(x - 7, y, 14, 48);
+      const colors = ['#fbcfe8', '#f9a8d4', '#fce7f3'];
+      const offsets = [
+        [0, 0, r],
+        [-r * 0.65, r * 0.2, r * 0.72],
+        [r * 0.65, r * 0.2, r * 0.72],
+        [0, -r * 0.45, r * 0.75]
+      ];
+      offsets.forEach(([ox, oy, or], idx) => {
+        ctx.fillStyle = colors[idx % colors.length];
+        ctx.beginPath();
+        ctx.arc(x + ox, y + oy, or, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+
+    function drawHikoneCastle(cx, baseY) {
+      ctx.save();
+      ctx.translate(cx, baseY);
+
+      ctx.fillStyle = '#64748b';
+      ctx.beginPath();
+      ctx.moveTo(-74, 30);
+      ctx.lineTo(-52, -24);
+      ctx.lineTo(52, -24);
+      ctx.lineTo(74, 30);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-44, -50, 88, 26);
+      drawCastleRoof(0, -50, 108, 15);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-32, -74, 64, 20);
+      drawCastleRoof(0, -74, 82, 13);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-20, -94, 40, 16);
+      drawCastleRoof(0, -94, 56, 12);
+
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.arc(-18, -108, 3.8, 0, Math.PI * 2);
+      ctx.arc(18, -108, 3.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawCastleRoof(x, y, w, h) {
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.moveTo(x - w / 2, y);
+      ctx.quadraticCurveTo(x, y - h * 0.4, x - w * 0.32, y - h);
+      ctx.lineTo(x + w * 0.32, y - h);
+      ctx.quadraticCurveTo(x, y - h * 0.4, x + w / 2, y);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x - w / 2, y);
+      ctx.lineTo(x + w / 2, y);
+      ctx.stroke();
+    }
+
+    /**
+     * =========================================================================
+     * 3. ゲーム①：彦根城・和菓子キャッチ＆お散歩アクション
+     * =========================================================================
+     */
+    const g1 = {
+      state: 'TITLE', // 'TITLE', 'PLAYING', 'GAMEOVER'
+      score: 0,
+      lives: 3,
+      maxLives: 3,
+      bellCharge: 100,
+      isFever: false,
+      feverTimer: 0,
+      feverDuration: 5.0,
+      spawnTimer: 0,
+      gameTime: 0,
+      keys: { left: false, right: false },
+      pointerTargetX: null,
+      fallingObjects: [],
+      particles: [],
+      floatingTexts: [],
+      player: {
+        x: 400,
+        y: 450,
+        vx: 0,
+        vy: 0,
+        radius: 30,
+        speed: 440,
+        jumpPower: -640,
+        gravity: 1650,
+        isGrounded: true,
+        facing: 1,
+        walkTimer: 0,
+        invincibleTimer: 0,
+        bellShakeTimer: 0
+      }
+    };
+
+    const G1_ITEMS = [
+      { id: 'dango', score: 100, type: 'good', weight: 32, radius: 22 },
+      { id: 'dorayaki', score: 150, type: 'good', weight: 28, radius: 23 },
+      { id: 'konnyaku', score: 250, type: 'good', weight: 16, radius: 22, rare: true },
+      { id: 'oumigyu', score: 350, type: 'good', weight: 10, radius: 25, rare: true },
+      { id: 'crow', score: 0, type: 'bad', weight: 14, radius: 22 },
+      { id: 'whirlwind', score: 0, type: 'bad', weight: 12, radius: 24 }
+    ];
+
+    function g1UpdateHUD() {
+      document.getElementById('g1ScoreDisplay').textContent = g1.score.toLocaleString();
+      document.getElementById('g1HighScoreDisplay').textContent = g1HighScore.toLocaleString();
+
+      const lifeEl = document.getElementById('g1LifeContainer');
+      lifeEl.innerHTML = '';
+      for (let i = 0; i < g1.maxLives; i++) {
+        const s = document.createElement('span');
+        s.className = 'text-base sm:text-xl';
+        s.textContent = i < g1.lives ? '❤️' : '🤍';
+        lifeEl.appendChild(s);
+      }
+
+      const gauge = document.getElementById('g1BellGaugeBar');
+      const bellBtn = document.getElementById('g1BtnBell');
+      const feverBanner = document.getElementById('g1FeverBanner');
+      gauge.style.width = `${Math.min(100, Math.max(0, g1.bellCharge))}%`;
+
+      if (g1.isFever) {
+        bellBtn.disabled = true;
+        bellBtn.innerHTML = '<span>✨</span><span>フィーバー中</span>';
+        feverBanner.classList.remove('hidden');
+      } else if (g1.bellCharge >= 100) {
+        bellBtn.disabled = false;
+        bellBtn.innerHTML = '<span>🔔</span><span>鈴を鳴らす！</span>';
+        feverBanner.classList.add('hidden');
+      } else {
+        bellBtn.disabled = true;
+        bellBtn.innerHTML = `<span>🔔</span><span>${Math.floor(g1.bellCharge)}%</span>`;
+        feverBanner.classList.add('hidden');
+      }
+    }
+
+    function g1StartGame() {
+      sound.init();
+      sound.playBell();
+      g1.score = 0;
+      g1.lives = g1.maxLives;
+      g1.bellCharge = 100;
+      g1.isFever = false;
+      g1.feverTimer = 0;
+      g1.spawnTimer = 0;
+      g1.gameTime = 0;
+      g1.fallingObjects = [];
+      g1.particles = [];
+      g1.floatingTexts = [];
+      g1.pointerTargetX = null;
+
+      g1.player.x = width / 2;
+      g1.player.y = groundY;
+      g1.player.vx = 0;
+      g1.player.vy = 0;
+      g1.player.isGrounded = true;
+      g1.player.invincibleTimer = 0;
+      g1.player.bellShakeTimer = 0.6;
+
+      g1.state = 'PLAYING';
+      document.getElementById('g1TitleScreen').classList.add('hidden');
+      document.getElementById('g1GameOverScreen').classList.add('hidden');
+      g1UpdateHUD();
+      syncGlobalHeader();
+    }
+
+    function g1EndGame() {
+      g1.state = 'GAMEOVER';
+      g1.isFever = false;
+      document.getElementById('g1FeverBanner').classList.add('hidden');
+
+      let isNewRecord = false;
+      if (g1.score > g1HighScore) {
+        g1HighScore = g1.score;
+        isNewRecord = true;
+        saveProgress();
+      }
+
+      document.getElementById('g1FinalScore').textContent = g1.score.toLocaleString();
+      document.getElementById('g1FinalHighScore').textContent = g1HighScore.toLocaleString();
+      const badge = document.getElementById('g1NewRecordBadge');
+      if (isNewRecord && g1.score > 0) badge.classList.remove('hidden');
+      else badge.classList.add('hidden');
+
+      document.getElementById('g1GameOverScreen').classList.remove('hidden');
+      g1UpdateHUD();
+      syncGlobalHeader();
+    }
+
+    function g1TriggerJump() {
+      if (activeApp !== 'GAME1' || g1.state !== 'PLAYING') return;
+      sound.init();
+      if (g1.player.isGrounded) {
+        g1.player.vy = g1.player.jumpPower;
+        g1.player.isGrounded = false;
+        sound.playJump(false);
+        g1SpawnParticles(g1.player.x, groundY, '#fef3c7', 5);
+      }
+    }
+
+    function g1TriggerBell() {
+      if (activeApp !== 'GAME1' || g1.state !== 'PLAYING') return;
+      if (g1.isFever || g1.bellCharge < 100) return;
+      sound.init();
+      sound.playBell();
+      g1.isFever = true;
+      g1.feverTimer = g1.feverDuration;
+      g1.bellCharge = 0;
+      g1.player.bellShakeTimer = 1.0;
+
+      g1.floatingTexts.push({
+        x: g1.player.x,
+        y: g1.player.y - 65,
+        text: 'チリンチリン♪ むぎゅっとフィーバー！',
+        color: '#d97706',
+        life: 1.0,
+        vy: -55
+      });
+
+      g1.fallingObjects.forEach(obj => {
+        if (obj.type === 'bad') {
+          obj.type = 'good';
+          obj.id = 'dango';
+          obj.score = 150;
+          obj.rare = false;
+          g1SpawnParticles(obj.x, obj.y, '#facc15', 7);
+        }
+      });
+      g1UpdateHUD();
+    }
+
+    function g1SpawnParticles(x, y, color, count) {
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+        const speed = 70 + Math.random() * 130;
+        g1.particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 40,
+          life: 0.45 + Math.random() * 0.25,
+          maxLife: 0.7,
+          color,
+          size: 4 + Math.random() * 3.5
+        });
+      }
+    }
+
+    function g1SpawnObject() {
+      const difficultyBoost = Math.min(12, Math.floor(g1.gameTime / 12));
+      const weighted = G1_ITEMS.map(item => ({
+        ...item,
+        w: item.type === 'bad' ? (g1.isFever ? 0 : item.weight + difficultyBoost) : item.weight
+      }));
+      const total = weighted.reduce((s, it) => s + it.w, 0);
+      let r = Math.random() * total;
+      let chosen = weighted[0];
+      for (const it of weighted) {
+        if (r < it.w) {
+          chosen = it;
+          break;
+        }
+        r -= it.w;
+      }
+
+      const margin = 42;
+      const x = margin + Math.random() * (width - margin * 2);
+      const baseSpeed = 165 + Math.min(180, g1.gameTime * 2.2) + Math.random() * 75;
+
+      g1.fallingObjects.push({
+        ...chosen,
+        x,
+        y: -35,
+        vy: chosen.type === 'bad' ? baseSpeed * 1.12 : baseSpeed,
+        vx: chosen.id === 'crow' ? (Math.random() < 0.5 ? -55 : 55) : 0,
+        angle: 0,
+        spin: chosen.id === 'whirlwind' ? 6 : (Math.random() - 0.5) * 2.5,
+        wobbleOffset: Math.random() * Math.PI * 2
+      });
+    }
+
+    function g1Update(dt) {
+      if (g1.state !== 'PLAYING') return;
+      g1.gameTime += dt;
+
+      if (g1.isFever) {
+        g1.feverTimer -= dt;
+        if (g1.feverTimer <= 0) {
+          g1.isFever = false;
+          g1.feverTimer = 0;
+          g1UpdateHUD();
+        }
+      } else if (g1.bellCharge < 100) {
+        g1.bellCharge = Math.min(100, g1.bellCharge + dt * 4.5);
+        g1UpdateHUD();
+      }
+
+      let moveDir = 0;
+      if (g1.keys.left) moveDir -= 1;
+      if (g1.keys.right) moveDir += 1;
+
+      if (moveDir !== 0) {
+        g1.pointerTargetX = null;
+        g1.player.vx = moveDir * g1.player.speed;
+        g1.player.facing = moveDir;
+      } else if (g1.pointerTargetX !== null) {
+        const diff = g1.pointerTargetX - g1.player.x;
+        if (Math.abs(diff) > 8) {
+          g1.player.vx = Math.sign(diff) * g1.player.speed;
+          g1.player.facing = Math.sign(diff);
+        } else {
+          g1.player.vx = 0;
+        }
+      } else {
+        g1.player.vx = 0;
+      }
+
+      g1.player.x += g1.player.vx * dt;
+      g1.player.x = Math.max(g1.player.radius + 8, Math.min(width - g1.player.radius - 8, g1.player.x));
+
+      if (Math.abs(g1.player.vx) > 10 && g1.player.isGrounded) {
+        g1.player.walkTimer += dt * 14;
+      } else {
+        g1.player.walkTimer = 0;
+      }
+
+      if (!g1.player.isGrounded) {
+        g1.player.vy += g1.player.gravity * dt;
+        g1.player.y += g1.player.vy * dt;
+        if (g1.player.y >= groundY) {
+          g1.player.y = groundY;
+          g1.player.vy = 0;
+          g1.player.isGrounded = true;
+        }
+      }
+
+      if (g1.player.invincibleTimer > 0) g1.player.invincibleTimer -= dt;
+      if (g1.player.bellShakeTimer > 0) g1.player.bellShakeTimer -= dt;
+
+      const interval = g1.isFever ? 0.32 : Math.max(0.45, 0.95 - g1.gameTime * 0.008);
+      g1.spawnTimer += dt;
+      if (g1.spawnTimer >= interval) {
+        g1.spawnTimer = 0;
+        g1SpawnObject();
+      }
+
+      for (let i = g1.fallingObjects.length - 1; i >= 0; i--) {
+        const obj = g1.fallingObjects[i];
+        obj.angle += obj.spin * dt;
+
+        if (g1.isFever && obj.type === 'good') {
+          const dx = g1.player.x - obj.x;
+          const dy = (g1.player.y - 25) - obj.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < 350 && dist > 1) {
+            obj.x += (dx / dist) * 430 * dt;
+            obj.y += (dy / dist) * 430 * dt;
+          } else {
+            obj.y += obj.vy * dt;
+          }
+        } else {
+          obj.y += obj.vy * dt;
+          if (obj.id === 'crow') {
+            obj.x += obj.vx * dt;
+            if (obj.x < 35 || obj.x > width - 35) obj.vx *= -1;
+          } else if (obj.id === 'whirlwind') {
+            obj.x += Math.sin(g1.gameTime * 4 + obj.wobbleOffset) * 75 * dt;
+          }
+        }
+
+        const hitDist = Math.hypot(obj.x - g1.player.x, obj.y - (g1.player.y - 24));
+        if (hitDist < g1.player.radius + obj.radius - 4) {
+          if (obj.type === 'good') {
+            const gained = g1.isFever ? Math.round(obj.score * 1.5) : obj.score;
+            g1.score += gained;
+            if (g1.score > g1HighScore) {
+              g1HighScore = g1.score;
+              saveProgress();
+            }
+            if (!g1.isFever) {
+              g1.bellCharge = Math.min(100, g1.bellCharge + (obj.rare ? 22 : 12));
+            }
+            // お団子系をキャッチしたら所持おだんごも少し増えるお楽しみ
+            if (obj.id === 'dango' || obj.rare) {
+              totalDangos += 1;
+              saveProgress();
+              syncGlobalHeader();
+            }
+            sound.playCatch(obj.rare);
+            g1SpawnParticles(obj.x, obj.y, obj.rare ? '#ef4444' : '#fbbf24', obj.rare ? 12 : 8);
+            g1.floatingTexts.push({ x: obj.x, y: obj.y - 10, text: `+${gained}`, color: obj.rare ? '#dc2626' : '#059669', life: 1.0, vy: -55 });
+            g1UpdateHUD();
+          } else if (g1.player.invincibleTimer <= 0 && !g1.isFever) {
+            g1.lives -= 1;
+            g1.player.invincibleTimer = 1.6;
+            sound.playDamage(false);
+            g1SpawnParticles(g1.player.x, g1.player.y - 25, '#6b7280', 10);
+            g1.floatingTexts.push({ x: g1.player.x, y: g1.player.y - 50, text: 'いたたっ！', color: '#dc2626', life: 1.0, vy: -55 });
+            g1UpdateHUD();
+            if (g1.lives <= 0) {
+              g1.fallingObjects.splice(i, 1);
+              g1EndGame();
+              return;
+            }
+          }
+          g1.fallingObjects.splice(i, 1);
+          continue;
+        }
+
+        if (obj.y > height + 50) {
+          g1.fallingObjects.splice(i, 1);
+        }
+      }
+
+      for (let i = g1.particles.length - 1; i >= 0; i--) {
+        const p = g1.particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 220 * dt;
+        p.life -= dt;
+        if (p.life <= 0) g1.particles.splice(i, 1);
+      }
+
+      for (let i = g1.floatingTexts.length - 1; i >= 0; i--) {
+        const ft = g1.floatingTexts[i];
+        ft.y += ft.vy * dt;
+        ft.life -= dt;
+        if (ft.life <= 0) g1.floatingTexts.splice(i, 1);
+      }
+    }
+
+    function drawCatCharacter({ x, y, scale = 1, facing = 1, walkTimer = 0, isGrounded = true, characterType = 'hikonyan', outfitId = 'classic', bellShake = false, showAura = false }) {
+      const outfit = OUTFITS.find(o => o.id === outfitId) || OUTFITS[0];
+      const isWaru = characterType === 'warunyanko';
+
+      ctx.save();
+      const bounceY = isGrounded ? Math.abs(Math.sin(walkTimer)) * -4 : 0;
+      ctx.translate(x, y + bounceY);
+      ctx.scale(scale, scale);
+
+      if (showAura) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(250, 204, 21, 0.8)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, -28, 46 + Math.sin(performance.now() * 0.012) * 4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 足元の影
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+      ctx.beginPath();
+      ctx.ellipse(0, -bounceY, 24, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const bodyColor = isWaru ? '#4c1d95' : '#ffffff';
+      const earInnerColor = isWaru ? '#a855f7' : '#fbcfe8';
+
+      // しっぽ
+      ctx.beginPath();
+      ctx.moveTo(-facing * 14, -12);
+      ctx.quadraticCurveTo(-facing * 32, -20, -facing * 26, -30);
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = bodyColor;
+      ctx.stroke();
+      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = '#1e293b';
+      ctx.stroke();
+
+      // 胴体（お着替え衣装カラー反映）
+      const robeFill = outfitId === 'classic' ? bodyColor : outfit.robeColor;
+      ctx.fillStyle = robeFill;
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.ellipse(0, -17, 20, 17, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 衣装アクセント帯・模様
+      if (outfitId !== 'classic') {
+        ctx.fillStyle = outfit.accentColor;
+        ctx.fillRect(-16, -20, 32, 5);
+      } else if (isWaru) {
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(-15, -20, 30, 4);
+      }
+
+      // 手
+      const armSwing = Math.sin(walkTimer) * 0.25;
+      ctx.fillStyle = robeFill;
+      ctx.save();
+      ctx.translate(-18, -20);
+      ctx.rotate(-0.4 + armSwing);
+      ctx.beginPath();
+      ctx.ellipse(-5, 0, 7, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(18, -20);
+      ctx.rotate(0.4 - armSwing);
+      ctx.beginPath();
+      ctx.ellipse(5, 0, 7, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // 首紐＆鈴
+      ctx.strokeStyle = isWaru ? '#7e22ce' : (outfitId === 'classic' ? '#dc2626' : outfit.accentColor);
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(-14, -29);
+      ctx.quadraticCurveTo(0, -24, 14, -29);
+      ctx.stroke();
+
+      const bellAngle = bellShake ? Math.sin(performance.now() * 0.045) * 0.45 : Math.sin(walkTimer) * 0.1;
+      ctx.save();
+      ctx.translate(0, -24);
+      ctx.rotate(bellAngle);
+      ctx.fillStyle = '#facc15';
+      ctx.strokeStyle = '#854d0e';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(0, 0, 6.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#713f12';
+      ctx.beginPath();
+      ctx.arc(0, 2, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // 頭
+      ctx.fillStyle = bodyColor;
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.ellipse(0, -44, 24, 20, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 猫耳
+      ctx.beginPath();
+      ctx.moveTo(-20, -54); ctx.lineTo(-24, -72); ctx.lineTo(-8, -61);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(20, -54); ctx.lineTo(24, -72); ctx.lineTo(8, -61);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+
+      ctx.fillStyle = earInnerColor;
+      ctx.beginPath();
+      ctx.arc(-18, -61, 4, 0, Math.PI * 2);
+      ctx.arc(18, -61, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 兜（ひこにゃんは赤備え兜、わるにゃんこ将軍は紫黒の将軍兜）
+      ctx.fillStyle = isWaru ? '#3b0764' : '#dc2626';
+      ctx.strokeStyle = isWaru ? '#facc15' : '#7f1d1d';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(0, -55, 16, Math.PI, 0, false);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 吹き返し
+      ctx.beginPath();
+      ctx.ellipse(-15, -55, 5, 7, -0.3, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(15, -55, 5, 7, 0.3, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+
+      // 前立て角・三日月
+      ctx.fillStyle = '#facc15';
+      ctx.strokeStyle = '#a16207';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(-4, -63); ctx.quadraticCurveTo(-22, -74, -18, -90); ctx.quadraticCurveTo(-11, -76, -1, -66);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(4, -63); ctx.quadraticCurveTo(22, -74, 18, -90); ctx.quadraticCurveTo(11, -76, 1, -66);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(0, -64, 7, 0.15 * Math.PI, 0.85 * Math.PI, false);
+      ctx.quadraticCurveTo(0, -61, -6, -61);
+      ctx.fill(); ctx.stroke();
+
+      // 表情
+      const lookOffset = facing * 2;
+      ctx.fillStyle = isWaru ? 'rgba(192, 132, 252, 0.45)' : 'rgba(251, 113, 133, 0.55)';
+      ctx.beginPath();
+      ctx.ellipse(-13 + lookOffset, -40, 4.5, 3, 0, 0, Math.PI * 2);
+      ctx.ellipse(13 + lookOffset, -40, 4.5, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = isWaru ? '#facc15' : '#1e293b';
+      ctx.fillStyle = isWaru ? '#facc15' : '#1e293b';
+      ctx.lineWidth = 2.2;
+      if (isWaru) {
+        // ちょっとキリッとした将軍眉・目
+        ctx.beginPath();
+        ctx.moveTo(-12 + lookOffset, -47); ctx.lineTo(-4 + lookOffset, -44);
+        ctx.moveTo(12 + lookOffset, -47); ctx.lineTo(4 + lookOffset, -44);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(-8 + lookOffset, -44, 2.7, 0, Math.PI * 2);
+      ctx.arc(8 + lookOffset, -44, 2.7, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#fb7185';
+      ctx.beginPath();
+      ctx.arc(lookOffset, -40, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = isWaru ? '#facc15' : '#1e293b';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(-3 + lookOffset, -37.5, 3, 0, Math.PI * 0.85);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(3 + lookOffset, -37.5, 3, Math.PI * 0.15, Math.PI);
+      ctx.stroke();
+
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(-17 + lookOffset, -42); ctx.lineTo(-24 + lookOffset, -43);
+      ctx.moveTo(-17 + lookOffset, -38); ctx.lineTo(-24 + lookOffset, -37);
+      ctx.moveTo(17 + lookOffset, -42); ctx.lineTo(24 + lookOffset, -43);
+      ctx.moveTo(17 + lookOffset, -38); ctx.lineTo(24 + lookOffset, -37);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function g1Draw() {
+      drawHikoneScenery(0);
+
+      // 地面
+      const groundGrad = ctx.createLinearGradient(0, groundY, 0, height);
+      groundGrad.addColorStop(0, '#4ade80');
+      groundGrad.addColorStop(0.22, '#22c55e');
+      groundGrad.addColorStop(0.26, '#fde68a');
+      groundGrad.addColorStop(1, '#f59e0b');
+      ctx.fillStyle = groundGrad;
+      ctx.fillRect(0, groundY, width, height - groundY);
+      ctx.strokeStyle = '#15803d';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(width, groundY);
+      ctx.stroke();
+
+      // 落下アイテム描画
+      g1.fallingObjects.forEach(obj => {
+        ctx.save();
+        ctx.translate(obj.x, obj.y);
+        if (obj.type === 'good') {
+          ctx.fillStyle = obj.rare ? 'rgba(254, 202, 202, 0.55)' : 'rgba(254, 249, 195, 0.55)';
+          ctx.beginPath();
+          ctx.arc(0, 0, obj.radius + 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.rotate(obj.id === 'crow' ? 0 : obj.angle);
+
+        if (obj.id === 'dango') {
+          ctx.strokeStyle = '#92400e'; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(-16, 16); ctx.lineTo(16, -16); ctx.stroke();
+          ['#86efac', '#ffffff', '#f9a8d4'].forEach((col, idx) => {
+            const off = -8 + idx * 8;
+            ctx.fillStyle = col; ctx.strokeStyle = '#475569'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.arc(off, -off, 6.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          });
+        } else if (obj.id === 'dorayaki') {
+          ctx.fillStyle = '#b45309'; ctx.strokeStyle = '#78350f'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.ellipse(0, 4, 17, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#451a03';
+          ctx.beginPath(); ctx.ellipse(0, 0, 16, 6, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#d97706';
+          ctx.beginPath(); ctx.ellipse(0, -4, 17, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        } else if (obj.id === 'konnyaku') {
+          ctx.fillStyle = '#dc2626'; ctx.strokeStyle = '#7f1d1d'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.roundRect(-14, -11, 28, 22, 6); ctx.fill(); ctx.stroke();
+          ctx.strokeStyle = '#fca5a5'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(-8, -5); ctx.lineTo(8, 5); ctx.moveTo(-8, 5); ctx.lineTo(8, -5); ctx.stroke();
+        } else if (obj.id === 'oumigyu') {
+          ctx.fillStyle = '#e11d48'; ctx.strokeStyle = '#881337'; ctx.lineWidth = 2.2;
+          ctx.beginPath(); ctx.ellipse(0, 0, 19, 13, -0.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          ctx.strokeStyle = '#ffe4e6'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(-10, -4); ctx.quadraticCurveTo(0, 2, 10, -5); ctx.moveTo(-8, 4); ctx.quadraticCurveTo(2, 0, 9, 5); ctx.stroke();
+        } else if (obj.id === 'crow') {
+          const flap = Math.sin(g1.gameTime * 18 + obj.wobbleOffset) * 10;
+          ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-16, -14 + flap, -24, -2 + flap); ctx.quadraticCurveTo(-12, 6, 0, 2); ctx.fill();
+          ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(16, -14 + flap, 24, -2 + flap); ctx.quadraticCurveTo(12, 6, 0, 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(0, 2, 9, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#facc15';
+          ctx.beginPath(); ctx.moveTo(-3, 4); ctx.lineTo(3, 4); ctx.lineTo(0, 11); ctx.closePath(); ctx.fill();
+        } else if (obj.id === 'whirlwind') {
+          ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 1.6); ctx.stroke();
+          ctx.fillStyle = '#ea580c';
+          ctx.beginPath(); ctx.ellipse(12, -8, 5, 3, 0.5, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#ca8a04';
+          ctx.beginPath(); ctx.ellipse(-12, 8, 5, 3, -0.5, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+      });
+
+      // プレイヤー描画
+      if (!(g1.player.invincibleTimer > 0 && Math.floor(g1.player.invincibleTimer * 14) % 2 === 0)) {
+        drawCatCharacter({
+          x: g1.player.x,
+          y: g1.player.y,
+          scale: 1,
+          facing: g1.player.facing,
+          walkTimer: g1.player.walkTimer,
+          isGrounded: g1.player.isGrounded,
+          characterType: 'hikonyan',
+          outfitId: 'classic',
+          bellShake: g1.player.bellShakeTimer > 0,
+          showAura: g1.isFever
+        });
+      }
+
+      // パーティクル＆ポップアップ
+      g1.particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      });
+
+      g1.floatingTexts.forEach(ft => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, ft.life);
+        ctx.font = '900 18px "M PLUS Rounded 1c", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4;
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillStyle = ft.color;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      });
+
+      drawCherryBlossoms();
+    }
+
+    /**
+     * =========================================================================
+     * 4. ゲーム②：おさんぽひこにゃん（自動走行ラン＆ジャンプ＆お着替え）
+     * =========================================================================
+     */
+    const g2 = {
+      state: 'TITLE', // 'TITLE', 'PLAYING', 'GAMEOVER'
+      score: 0,
+      runDangos: 0,
+      scrollX: 0,
+      runSpeed: 295,
+      jumpCount: 0,
+      maxJumps: 2,
+      segments: [], // 足場・穴セグメント
+      items: [], // おだんご・障害物
+      particles: [],
+      floatingTexts: [],
+      spawnCursorX: 0,
+      runner: {
+        x: 150,
+        y: 450,
+        vy: 0,
+        radius: 26,
+        gravity: 1750,
+        jumpPower: -620,
+        doubleJumpPower: -560,
+        isGrounded: true,
+        walkTimer: 0
+      }
+    };
+
+    function g2UpdateHUD() {
+      document.getElementById('g2ScoreDisplay').textContent = Math.floor(g2.score).toLocaleString();
+      document.getElementById('g2HighScoreDisplay').textContent = g2HighScore.toLocaleString();
+      document.getElementById('g2RunDangoDisplay').textContent = g2.runDangos.toLocaleString();
+      document.getElementById('wardrobeDangoCount').textContent = totalDangos.toLocaleString();
+    }
+
+    function g2SelectCharacter(charId) {
+      g2Character = charId;
+      saveProgress();
+      const hBtn = document.getElementById('pickHikonyanBtn');
+      const wBtn = document.getElementById('pickWarunyankoBtn');
+      if (charId === 'hikonyan') {
+        hBtn.className = 'border-3 rounded-2xl p-2.5 text-left transition cursor-pointer bg-red-50 border-red-600 ring-2 ring-red-300';
+        wBtn.className = 'border-2 rounded-2xl p-2.5 text-left transition cursor-pointer bg-purple-50/60 border-purple-300 hover:border-purple-600';
+      } else {
+        wBtn.className = 'border-3 rounded-2xl p-2.5 text-left transition cursor-pointer bg-purple-100 border-purple-700 ring-2 ring-purple-300';
+        hBtn.className = 'border-2 rounded-2xl p-2.5 text-left transition cursor-pointer bg-red-50/60 border-red-300 hover:border-red-600';
+      }
+    }
+
+    function g2RenderWardrobe() {
+      const container = document.getElementById('outfitListContainer');
+      document.getElementById('wardrobeDangoCount').textContent = totalDangos.toLocaleString();
+      container.innerHTML = '';
+
+      OUTFITS.forEach(outfit => {
+        const isUnlocked = unlockedOutfits.includes(outfit.id);
+        const isEquipped = equippedOutfitId === outfit.id;
+        const canAfford = totalDangos >= outfit.cost;
+
+        const card = document.createElement('div');
+        card.className = `rounded-2xl p-3 border-2 flex flex-col justify-between ${
+          isEquipped
+            ? 'bg-amber-50 border-amber-500 ring-2 ring-amber-300'
+            : isUnlocked
+              ? 'bg-white border-emerald-300'
+              : 'bg-gray-50 border-gray-200'
+        }`;
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="font-black text-sm text-gray-900">${outfit.name}</span>
+              <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-white border border-gray-200 text-gray-700">${outfit.badge}</span>
+            </div>
+            <p class="text-[11px] text-gray-600 mb-2.5">${outfit.desc}</p>
+          </div>
+        `;
+
+        const actionBtn = document.createElement('button');
+        actionBtn.type = 'button';
+        if (isEquipped) {
+          actionBtn.className = 'w-full py-1.5 px-3 rounded-xl font-black text-xs bg-amber-500 text-white cursor-default';
+          actionBtn.textContent = '✓ 着替え中！';
+        } else if (isUnlocked) {
+          actionBtn.className = 'w-full py-1.5 px-3 rounded-xl font-black text-xs bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition';
+          actionBtn.textContent = 'この服に着替える';
+          actionBtn.addEventListener('click', () => {
+            sound.init();
+            sound.playUnlock();
+            equippedOutfitId = outfit.id;
+            saveProgress();
+            g2RenderWardrobe();
+            syncGlobalHeader();
+            showToast(`「${outfit.name}」にお着替えしたにゃ！`);
+          });
+        } else {
+          actionBtn.className = `w-full py-1.5 px-3 rounded-xl font-black text-xs transition ${
+            canAfford
+              ? 'bg-pink-600 hover:bg-pink-500 text-white cursor-pointer'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`;
+          actionBtn.disabled = !canAfford;
+          actionBtn.textContent = canAfford ? `🍡 ${outfit.cost}こでアンロック` : `🔒 必要: 🍡 ${outfit.cost}こ`;
+          actionBtn.addEventListener('click', () => {
+            if (totalDangos < outfit.cost) return;
+            sound.init();
+            sound.playUnlock();
+            totalDangos -= outfit.cost;
+            unlockedOutfits.push(outfit.id);
+            equippedOutfitId = outfit.id;
+            saveProgress();
+            g2RenderWardrobe();
+            syncGlobalHeader();
+            showToast(`🎉 「${outfit.name}」を手に入れて着替えたにゃ！`);
+          });
+        }
+
+        card.appendChild(actionBtn);
+        container.appendChild(card);
+      });
+    }
+
+    function g2OpenWardrobe() {
+      sound.init();
+      g2RenderWardrobe();
+      document.getElementById('g2WardrobeScreen').classList.remove('hidden');
+    }
+
+    function g2CloseWardrobe() {
+      document.getElementById('g2WardrobeScreen').classList.add('hidden');
+    }
+
+    function g2GenerateNextSegment() {
+      const startX = g2.spawnCursorX;
+      const roll = Math.random();
+
+      if (startX < 420 || roll < 0.52) {
+        // 通常の平坦参道＋おだんご＆障害物
+        const segW = 280 + Math.random() * 140;
+        g2.segments.push({ x: startX, w: segW, topY: groundY, type: 'ground' });
+
+        // おだんご配置
+        const dangoCount = 3;
+        for (let i = 0; i < dangoCount; i++) {
+          const dx = startX + 70 + i * 52;
+          const dy = groundY - 34 - (i === 1 && Math.random() < 0.5 ? 42 : 0);
+          g2.items.push({ kind: 'dango', x: dx, y: dy, r: 16, collected: false });
+        }
+
+        // 障害物（岩・トゲ・わるにゃんこ障害物）
+        if (startX > 500 && Math.random() < 0.68) {
+          const obsKinds = ['rock', 'thorn', 'waru_minion'];
+          const obsKind = obsKinds[Math.floor(Math.random() * obsKinds.length)];
+          g2.items.push({
+            kind: 'obstacle',
+            obsKind,
+            x: startX + segW * 0.62,
+            y: groundY,
+            w: 28,
+            h: obsKind === 'waru_minion' ? 34 : 26
+          });
+        }
+        g2.spawnCursorX = startX + segW;
+      } else if (roll < 0.78) {
+        // 段差（少し高めの石畳ステージ）
+        const stepW = 190 + Math.random() * 80;
+        const stepTopY = groundY - 58;
+        g2.segments.push({ x: startX, w: stepW, topY: stepTopY, type: 'step' });
+
+        for (let i = 0; i < 3; i++) {
+          g2.items.push({
+            kind: 'dango',
+            x: startX + 45 + i * 48,
+            y: stepTopY - 34,
+            r: 16,
+            collected: false
+          });
+        }
+        g2.spawnCursorX = startX + stepW;
+      } else {
+        // 落とし穴（ジャンプで飛び越える＋空中にご褒美おだんご）
+        const gapW = 105 + Math.random() * 35;
+        g2.segments.push({ x: startX, w: gapW, topY: height + 200, type: 'pit' });
+
+        g2.items.push({
+          kind: 'dango',
+          x: startX + gapW * 0.5,
+          y: groundY - 72,
+          r: 17,
+          collected: false,
+          bonus: true
+        });
+        g2.spawnCursorX = startX + gapW;
+      }
+    }
+
+    function g2StartGame() {
+      sound.init();
+      sound.playBell();
+      g2.score = 0;
+      g2.runDangos = 0;
+      g2.scrollX = 0;
+      g2.runSpeed = 295;
+      g2.jumpCount = 0;
+      g2.segments = [];
+      g2.items = [];
+      g2.particles = [];
+      g2.floatingTexts = [];
+      g2.spawnCursorX = 0;
+
+      g2.runner.x = Math.min(165, width * 0.22);
+      g2.runner.y = groundY;
+      g2.runner.vy = 0;
+      g2.runner.isGrounded = true;
+      g2.runner.walkTimer = 0;
+
+      while (g2.spawnCursorX < width + 500) {
+        g2GenerateNextSegment();
+      }
+
+      g2.state = 'PLAYING';
+      document.getElementById('g2TitleScreen').classList.add('hidden');
+      document.getElementById('g2GameOverScreen').classList.add('hidden');
+      document.getElementById('g2WardrobeScreen').classList.add('hidden');
+      g2UpdateHUD();
+      syncGlobalHeader();
+    }
+
+    function g2EndGame(reasonText = 'おさんぽ終了にゃ！') {
+      g2.state = 'GAMEOVER';
+      sound.playDamage(true);
+
+      const finalInt = Math.floor(g2.score);
+      let isNewRecord = false;
+      if (finalInt > g2HighScore) {
+        g2HighScore = finalInt;
+        isNewRecord = true;
+      }
+      saveProgress();
+
+      document.getElementById('g2GameOverReason').textContent = reasonText;
+      document.getElementById('g2FinalScore').textContent = finalInt.toLocaleString();
+      document.getElementById('g2EarnedDango').textContent = `+${g2.runDangos}`;
+      document.getElementById('g2FinalHighScore').textContent = g2HighScore.toLocaleString();
+
+      const badge = document.getElementById('g2NewRecordBadge');
+      if (isNewRecord && finalInt > 0) badge.classList.remove('hidden');
+      else badge.classList.add('hidden');
+
+      document.getElementById('g2GameOverScreen').classList.remove('hidden');
+      g2UpdateHUD();
+      syncGlobalHeader();
+    }
+
+    function g2TriggerJump() {
+      if (activeApp !== 'GAME2' || g2.state !== 'PLAYING') return;
+      sound.init();
+      if (g2.jumpCount < g2.maxJumps) {
+        const isSecond = g2.jumpCount === 1;
+        g2.runner.vy = isSecond ? g2.runner.doubleJumpPower : g2.runner.jumpPower;
+        g2.runner.isGrounded = false;
+        g2.jumpCount += 1;
+        sound.playJump(isSecond);
+
+        for (let i = 0; i < (isSecond ? 9 : 5); i++) {
+          g2.particles.push({
+            x: g2.runner.x,
+            y: g2.runner.y - 6,
+            vx: (Math.random() - 0.5) * 110,
+            vy: 20 + Math.random() * 60,
+            life: 0.35,
+            maxLife: 0.35,
+            color: isSecond ? '#facc15' : '#ffffff',
+            size: 4 + Math.random() * 3
+          });
+        }
+      }
+    }
+
+    function g2Update(dt) {
+      if (g2.state !== 'PLAYING') return;
+
+      g2.runSpeed = Math.min(470, 295 + g2.scrollX * 0.014);
+      const dx = g2.runSpeed * dt;
+      g2.scrollX += dx;
+      g2.score += dx * 0.12;
+
+      // セグメントとアイテムを左へスクロール
+      g2.segments.forEach(s => { s.x -= dx; });
+      g2.items.forEach(it => { it.x -= dx; });
+
+      while (g2.spawnCursorX - dx < width + 450) {
+        g2.spawnCursorX -= dx;
+        g2GenerateNextSegment();
+      }
+      g2.spawnCursorX -= dx;
+
+      g2.segments = g2.segments.filter(s => s.x + s.w > -120);
+      g2.items = g2.items.filter(it => !it.collected && it.x > -100);
+
+      // 現在の足場判定
+      const prevY = g2.runner.y;
+      g2.runner.vy += g2.runner.gravity * dt;
+      g2.runner.y += g2.runner.vy * dt;
+
+      let landed = false;
+      for (const seg of g2.segments) {
+        if (seg.type !== 'pit') {
+          if (g2.runner.x + 12 > seg.x && g2.runner.x - 12 < seg.x + seg.w) {
+            if (g2.runner.vy >= 0 && prevY <= seg.topY + 14 && g2.runner.y >= seg.topY) {
+              g2.runner.y = seg.topY;
+              g2.runner.vy = 0;
+              g2.runner.isGrounded = true;
+              g2.jumpCount = 0;
+              landed = true;
+              break;
+            }
+          }
+        }
+      }
+      if (!landed) {
+        g2.runner.isGrounded = false;
+      }
+
+      if (g2.runner.isGrounded) {
+        g2.runner.walkTimer += dt * 15;
+      }
+
+      // 落とし穴落下判定
+      if (g2.runner.y > height + 45) {
+        g2EndGame('落とし穴に落ちちゃったにゃ…！');
+        return;
+      }
+
+      // おだんご＆障害物判定
+      const rx = g2.runner.x;
+      const ry = g2.runner.y - 24;
+
+      for (const it of g2.items) {
+        if (it.collected) continue;
+        if (it.kind === 'dango') {
+          const dist = Math.hypot(it.x - rx, it.y - ry);
+          if (dist < g2.runner.radius + it.r) {
+            it.collected = true;
+            g2.runDangos += 1;
+            totalDangos += 1;
+            const pts = it.bonus ? 120 : 80;
+            g2.score += pts;
+            if (Math.floor(g2.score) > g2HighScore) {
+              g2HighScore = Math.floor(g2.score);
+            }
+            saveProgress();
+            sound.playCatch(Boolean(it.bonus));
+            for (let k = 0; k < 7; k++) {
+              const ang = (Math.PI * 2 * k) / 7;
+              g2.particles.push({
+                x: it.x, y: it.y,
+                vx: Math.cos(ang) * 95, vy: Math.sin(ang) * 95 - 30,
+                life: 0.4, maxLife: 0.4, color: '#f472b6', size: 4
+              });
+            }
+            g2.floatingTexts.push({ x: it.x, y: it.y - 10, text: `🍡 +${pts}`, color: '#db2777', life: 0.85, vy: -48 });
+            g2UpdateHUD();
+            syncGlobalHeader();
+          }
+        } else if (it.kind === 'obstacle') {
+          const obsTop = it.y - it.h;
+          const hitX = Math.abs(it.x - rx) < (it.w * 0.5 + 14);
+          const hitY = (g2.runner.y - 4) > obsTop && (g2.runner.y - 44) < it.y;
+          if (hitX && hitY) {
+            g2EndGame('障害物にぶつかっちゃったにゃ！');
+            return;
+          }
+        }
+      }
+
+      for (let i = g2.particles.length - 1; i >= 0; i--) {
+        const p = g2.particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 200 * dt;
+        p.life -= dt;
+        if (p.life <= 0) g2.particles.splice(i, 1);
+      }
+
+      for (let i = g2.floatingTexts.length - 1; i >= 0; i--) {
+        const ft = g2.floatingTexts[i];
+        ft.y += ft.vy * dt;
+        ft.life -= dt;
+        if (ft.life <= 0) g2.floatingTexts.splice(i, 1);
+      }
+
+      g2UpdateHUD();
+    }
+
+    function g2Draw() {
+      drawHikoneScenery(g2.scrollX);
+
+      // 落とし穴の川／お堀底
+      ctx.fillStyle = '#0ea5e9';
+      ctx.fillRect(0, height - 22, width, 22);
+
+      // セグメント（参道・段差）描画
+      g2.segments.forEach(seg => {
+        if (seg.type === 'pit') return;
+        const grad = ctx.createLinearGradient(0, seg.topY, 0, height);
+        grad.addColorStop(0, seg.type === 'step' ? '#fbbf24' : '#4ade80');
+        grad.addColorStop(0.2, seg.type === 'step' ? '#f59e0b' : '#22c55e');
+        grad.addColorStop(1, '#b45309');
+        ctx.fillStyle = grad;
+        ctx.fillRect(seg.x, seg.topY, seg.w, height - seg.topY);
+
+        ctx.strokeStyle = seg.type === 'step' ? '#92400e' : '#15803d';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(seg.x, seg.topY);
+        ctx.lineTo(seg.x + seg.w, seg.topY);
+        ctx.stroke();
+      });
+
+      // おだんご＆障害物描画
+      g2.items.forEach(it => {
+        if (it.collected) return;
+        ctx.save();
+        if (it.kind === 'dango') {
+          ctx.translate(it.x, it.y);
+          if (it.bonus) {
+            ctx.fillStyle = 'rgba(253, 224, 71, 0.45)';
+            ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.strokeStyle = '#92400e'; ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.moveTo(-10, 10); ctx.lineTo(10, -10); ctx.stroke();
+
+          ['#86efac', '#ffffff', '#f9a8d4'].forEach((c, idx) => {
+            const off = -5 + idx * 5;
+            ctx.fillStyle = c; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.4;
+            ctx.beginPath(); ctx.arc(off, -off, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          });
+        } else if (it.kind === 'obstacle') {
+          ctx.translate(it.x, it.y);
+          if (it.obsKind === 'rock') {
+            ctx.fillStyle = '#64748b'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-14, 0); ctx.lineTo(-10, -20); ctx.lineTo(4, -25); ctx.lineTo(14, -12); ctx.lineTo(15, 0);
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+          } else if (it.obsKind === 'thorn') {
+            ctx.fillStyle = '#dc2626'; ctx.strokeStyle = '#7f1d1d'; ctx.lineWidth = 2;
+            [-9, 0, 9].forEach(tx => {
+              ctx.beginPath(); ctx.moveTo(tx - 5, 0); ctx.lineTo(tx, -22); ctx.lineTo(tx + 5, 0); ctx.closePath();
+              ctx.fill(); ctx.stroke();
+            });
+          } else {
+            // わるにゃんこ障害物（紫のミニお邪魔キャラ）
+            ctx.fillStyle = '#581c87'; ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(0, -16, 15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath(); ctx.arc(-5, -18, 2.2, 0, Math.PI * 2); ctx.arc(5, -18, 2.2, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+        ctx.restore();
+      });
+
+      // ランナー描画（選択キャラ＆着替え衣装を反映）
+      drawCatCharacter({
+        x: g2.runner.x,
+        y: g2.runner.y,
+        scale: 0.95,
+        facing: 1,
+        walkTimer: g2.runner.walkTimer,
+        isGrounded: g2.runner.isGrounded,
+        characterType: g2Character,
+        outfitId: equippedOutfitId,
+        bellShake: false,
+        showAura: false
+      });
+
+      g2.particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      });
+
+      g2.floatingTexts.forEach(ft => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, ft.life);
+        ctx.font = '900 16px "M PLUS Rounded 1c", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3.5;
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillStyle = ft.color;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      });
+
+      drawCherryBlossoms();
+    }
+
+    /**
+     * =========================================================================
+     * 5. 画面遷移・リサイズ・メインループ・入力ハンドラ
+     * =========================================================================
+     */
+    function hideAllGamePanels() {
+      document.getElementById('gameSelectScreen').classList.add('hidden');
+      document.getElementById('g1HudOverlay').classList.add('hidden');
+      document.getElementById('g1FeverBanner').classList.add('hidden');
+      document.getElementById('g1TitleScreen').classList.add('hidden');
+      document.getElementById('g1GameOverScreen').classList.add('hidden');
+      document.getElementById('g2HudOverlay').classList.add('hidden');
+      document.getElementById('g2TitleScreen').classList.add('hidden');
+      document.getElementById('g2WardrobeScreen').classList.add('hidden');
+      document.getElementById('g2GameOverScreen').classList.add('hidden');
+      document.getElementById('bottomControlsBar').classList.add('hidden');
+      document.getElementById('g1Controls').classList.add('hidden');
+      document.getElementById('g2Controls').classList.add('hidden');
+    }
+
+    function openGameSelect() {
+      sound.init();
+      activeApp = 'SELECT';
+      g1.state = 'TITLE';
+      g2.state = 'TITLE';
+      g1.keys.left = false;
+      g1.keys.right = false;
+      hideAllGamePanels();
+      document.getElementById('gameSelectScreen').classList.remove('hidden');
+      syncGlobalHeader();
+    }
+
+    function openGame1() {
+      sound.init();
+      activeApp = 'GAME1';
+      g1.state = 'TITLE';
+      g1.player.x = width / 2;
+      g1.player.y = groundY;
+      hideAllGamePanels();
+      document.getElementById('g1HudOverlay').classList.remove('hidden');
+      document.getElementById('g1TitleScreen').classList.remove('hidden');
+      document.getElementById('bottomControlsBar').classList.remove('hidden');
+      document.getElementById('g1Controls').classList.remove('hidden');
+      g1UpdateHUD();
+      syncGlobalHeader();
+    }
+
+    function openGame2() {
+      sound.init();
+      activeApp = 'GAME2';
+      g2.state = 'TITLE';
+      g2.runner.x = Math.min(165, width * 0.22);
+      g2.runner.y = groundY;
+      hideAllGamePanels();
+      g2SelectCharacter(g2Character);
+      document.getElementById('g2HudOverlay').classList.remove('hidden');
+      document.getElementById('g2TitleScreen').classList.remove('hidden');
+      document.getElementById('bottomControlsBar').classList.remove('hidden');
+      document.getElementById('g2Controls').classList.remove('hidden');
+      g2UpdateHUD();
+      syncGlobalHeader();
+    }
+
+    function resizeCanvas() {
+      const container = document.getElementById('gameContainer');
+      const rect = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      width = rect.width;
+      height = rect.height;
+      groundY = height - 66;
+      if (g1.player.isGrounded) g1.player.y = groundY;
+      g1.player.x = Math.max(g1.player.radius + 10, Math.min(width - g1.player.radius - 10, g1.player.x));
+      if (g2.runner.isGrounded && g2.state !== 'PLAYING') {
+        g2.runner.y = groundY;
+      }
+    }
+
+    let lastTime = 0;
+    function mainLoop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+      lastTime = timestamp;
+
+      updateCherryBlossoms(dt);
+
+      if (activeApp === 'GAME1') {
+        g1Update(dt);
+        g1Draw();
+      } else if (activeApp === 'GAME2') {
+        g2Update(dt);
+        g2Draw();
+      } else {
+        drawHikoneScenery(timestamp * 0.025);
+        ctx.fillStyle = '#4ade80';
+        ctx.fillRect(0, groundY, width, height - groundY);
+        drawCherryBlossoms();
+      }
+
+      requestAnimationFrame(mainLoop);
+    }
+
+    // キーボード入力
+    window.addEventListener('keydown', (e) => {
+      if (activeApp === 'GAME1') {
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') g1.keys.left = true;
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') g1.keys.right = true;
+        if (e.code === 'ArrowUp' || e.code === 'KeyW') {
+          e.preventDefault();
+          g1TriggerJump();
+        }
+        if (e.code === 'Space') {
+          e.preventDefault();
+          if (g1.state === 'PLAYING') g1TriggerBell();
+          else g1StartGame();
+        }
+      } else if (activeApp === 'GAME2') {
+        if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+          e.preventDefault();
+          if (g2.state === 'PLAYING') {
+            g2TriggerJump();
+          } else if (document.getElementById('g2WardrobeScreen').classList.contains('hidden')) {
+            g2StartGame();
+          }
+        }
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') g1.keys.left = false;
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') g1.keys.right = false;
+    });
+
+    // キャンバス上のクリック/タップ操作
+    canvas.addEventListener('pointerdown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+
+      if (activeApp === 'GAME1' && g1.state === 'PLAYING') {
+        if (Math.hypot(px - g1.player.x, py - (g1.player.y - 30)) < 55 && g1.bellCharge >= 100 && !g1.isFever) {
+          g1TriggerBell();
+          return;
+        }
+        g1.pointerTargetX = px;
+        if (py < height * 0.65) g1TriggerJump();
+      } else if (activeApp === 'GAME2' && g2.state === 'PLAYING') {
+        g2TriggerJump();
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (activeApp === 'GAME1' && g1.state === 'PLAYING' && (e.buttons > 0 || e.pointerType === 'touch')) {
+        const rect = canvas.getBoundingClientRect();
+        g1.pointerTargetX = e.clientX - rect.left;
+      }
+    });
+
+    canvas.addEventListener('pointerup', () => {
+      g1.pointerTargetX = null;
+    });
+
+    function bindHoldButton(btn, setter) {
+      const onStart = (e) => { e.preventDefault(); setter(true); };
+      const onEnd = (e) => { e.preventDefault(); setter(false); };
+      btn.addEventListener('mousedown', onStart);
+      btn.addEventListener('mouseup', onEnd);
+      btn.addEventListener('mouseleave', onEnd);
+      btn.addEventListener('touchstart', onStart, { passive: false });
+      btn.addEventListener('touchend', onEnd, { passive: false });
+      btn.addEventListener('touchcancel', onEnd, { passive: false });
+    }
+
+    bindHoldButton(document.getElementById('g1BtnLeft'), v => { g1.keys.left = v; });
+    bindHoldButton(document.getElementById('g1BtnRight'), v => { g1.keys.right = v; });
+
+    document.getElementById('g1BtnJump').addEventListener('click', g1TriggerJump);
+    document.getElementById('g1BtnBell').addEventListener('click', g1TriggerBell);
+    document.getElementById('g1StartBtn').addEventListener('click', g1StartGame);
+    document.getElementById('g1RetryBtn').addEventListener('click', g1StartGame);
+
+    document.getElementById('g2BtnJump').addEventListener('click', g2TriggerJump);
+    document.getElementById('g2StartBtn').addEventListener('click', g2StartGame);
+    document.getElementById('g2RetryBtn').addEventListener('click', g2StartGame);
+    document.getElementById('pickHikonyanBtn').addEventListener('click', () => g2SelectCharacter('hikonyan'));
+    document.getElementById('pickWarunyankoBtn').addEventListener('click', () => g2SelectCharacter('warunyanko'));
+    document.getElementById('g2OpenWardrobeBtn').addEventListener('click', g2OpenWardrobe);
+    document.getElementById('g2WardrobeFromTitleBtn').addEventListener('click', g2OpenWardrobe);
+    document.getElementById('g2WardrobeFromOverBtn').addEventListener('click', g2OpenWardrobe);
+    document.getElementById('g2CloseWardrobeBtn').addEventListener('click', g2CloseWardrobe);
+
+    document.getElementById('backToMenuBtn').addEventListener('click', openGameSelect);
+    document.getElementById('selectGame1Btn').addEventListener('click', openGame1);
+    document.getElementById('selectGame2Btn').addEventListener('click', openGame2);
+
+    window.addEventListener('resize', resizeCanvas);
+
+    window.onload = function () {
+      resizeCanvas();
+      initCherryBlossoms();
+      syncGlobalHeader();
+      requestAnimationFrame(mainLoop);
+    };
+  </script>
+</body>
+</html>
